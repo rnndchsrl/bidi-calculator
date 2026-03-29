@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Virtuelle Distanz – VW BiDi Rechner</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.5;
+    }
+    h1, h2 { margin-top: 1em; }
+    label, select, input, button {
+      display: block;
+      margin: 4px 0;
+    }
+    input, select {
+      width: 100%;
+      padding: 6px;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 12px;
+      padding: 10px;
+      background: #005ea5;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #004488;
+    }
+    .result {
+      margin-top: 16px;
+      font-size: 1.1em;
+      font-weight: bold;
+    }
+    .info {
+      font-size: 0.9em;
+      color: #666;
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Virtuelle Distanz nach VW‑Formel</h1>
+  <p>
+    Formel:  
+    <code>Virtuelle Distanz [km] = (V2H + V2L‑Energie [Wh]) / (ungünstigster WLTP‑Verbrauch [Wh/km])</code>
+  </p>
+
+  <label for="model">Modell (Fahrzeugfamilie):</label>
+  <select id="model">
+    <option value="id3">VW ID.3 – 16,7 kWh/100 km (≈ 167 Wh/km)</option>
+    <option value="id4">VW ID.4 – 17,4 kWh/100 km (≈ 174 Wh/km)</option>
+    <option value="id5">VW ID.5 – 17,1 kWh/100 km (≈ 171 Wh/km)</option>
+    <option value="enyaq">Škoda Enyaq – 16,0 kWh/100 km (≈ 160 Wh/km)</option>
+    <option value="born">Cupra Born – 15,7 kWh/100 km (≈ 157 Wh/km)</option>
+    <option value="q4">Audi Q4 e‑tron – 17,9 kWh/100 km (≈ 179 Wh/km)</option>
+  </select>
+
+  <label for="energy">V2H + V2L Energie (Wh):</label>
+  <input type="number" id="energy" placeholder="Z. B. 12000" min="0" />
+
+  <button onclick="calculate()">Berechnen</button>
+
+  <div id="result" class="result"></div>
+
+  <div class="info">
+    <p><strong>Hinweise:</strong></p>
+    <ul>
+      <li>Die hier genutzten Verbrauchswerte entsprechen den jeweils ungünstigsten WLTP‑Verbrauchswerten der Fahrzeugfamilien.</li>
+      <li>Die virtuelle Distanz wird zur realen Fahrstrecke addiert, um die gesamte Batterielaufleistung (real + virtuell) zu erfassen.</li>
+    </ul>
+  </div>
+
+  <script>
+    // Ungünstigste WLTP‑Verbrauchswerte (in Wh/km) der jeweiligen Modellreihen
+    const consumptionWhPerKm = {
+      id3:  167,
+      id4:  174,
+      id5:  171,
+      enyaq: 160,
+      born:  157,
+      q4:    179
+    };
+
+    function calculate() {
+      const model      = document.getElementById("model").value;
+      const energyWh   = parseFloat(document.getElementById("energy").value);
+      const resultDiv  = document.getElementById("result");
+
+      if (isNaN(energyWh) || energyWh <= 0) {
+        resultDiv.textContent = "Bitte gib eine gültige Energie in Wh ein.";
+        return;
+      }
+
+      const whPerKm = consumptionWhPerKm[model];
+      const dist    = energyWh / whPerKm;
+
+      resultDiv.innerHTML = `
+        <p>
+          <strong>Ergebnis:</strong><br />
+          Entladene Energie: ${energyWh.toLocaleString()} Wh<br />
+          Verbrauchswert: ${whPerKm} Wh/km<br />
+          <strong>Virtuelle Distanz ≈ ${dist.toFixed(1)} km</strong>
+        </p>
+      `;
+    }
+  </script>
+
+</body>
+</html>
