@@ -1,0 +1,36 @@
+{
+  "id3":  {
+    "name": "VW ID.3",
+    "wltp_kwh_per_100km": 16.7,
+    "wltp_wh_per_km": 167
+  },
+  "id4":  {
+    "name": "VW ID.4",
+    "wltp_kwh_per_100km": 17.4,
+    "wltp_wh_per_km": 174
+  },
+  "id5":  {
+    "name": "VW ID.5",
+    "wltp_wh_per_km": 171
+  },
+  "enyaq": {
+    "name": "Škoda Enyaq",
+    "wltp_wh_per_km": 160
+  },
+  "born":  {
+    "name": "Cupra Born",
+    "wltp_wh_per_km": 157
+  },
+  "q4":  {
+    "name": "Audi Q4 e-tron",
+    "wltp_wh_per_km": 179
+  }
+
+  // Beispiel für zukünftige Erweiterung:
+  /*
+  "new_model": {
+    "name": "Neues Modell XY",
+    "wltp_wh_per_km": 185
+  }
+  */
+}
