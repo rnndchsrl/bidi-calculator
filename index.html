@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Virtuelle Distanz – VW BiDi Rechner (kWh + Tage)</title>
+  <title>Virtuelle Distanz – VW BiDi (externes Modell‑JSON)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -59,22 +59,13 @@
   </p>
 
   <label for="model">Modell (Fahrzeugfamilie):</label>
-  <select id="model">
-    <option value="id3">VW ID.3 – 16,7 kWh/100 km (≈ 167 Wh/km)</option>
-    <option value="id4">VW ID.4 – 17,4 kWh/100 km (≈ 174 Wh/km)</option>
-    <option value="id5">VW ID.5 – 17,1 kWh/100 km (≈ 171 Wh/km)</option>
-    <option value="enyaq">Škoda Enyaq – 16,0 kWh/100 km (≈ 160 Wh/km)</option>
-    <option value="born">Cupra Born – 15,7 kWh/100 km (≈ 157 Wh/km)</option>
-    <option value="q4">Audi Q4 e‑tron – 17,9 kWh/100 km (≈ 179 Wh/km)</option>
-  </select>
+  <select id="model"></select>
 
-  <!-- Eingabe 1: kWh direkt -->
   <div class="group">
     <label for="energy_kwh">V2H + V2L Energie (kWh, direkt):</label>
     <input type="number" id="energy_kwh" placeholder="Z. B. 12.0" step="0.01" min="0" />
   </div>
 
-  <!-- Eingabe 2: kWh pro Tag × Tage -->
   <div class="group">
     <p><strong>Oder:</strong> Energieverbrauch über Zeit (z. B. typische Entladung pro Tag):</p>
     <label for="kwh_per_day">Entladene Energie pro Tag (kWh):</label>
@@ -91,41 +82,72 @@
   <div class="info">
     <p><strong>Hinweise:</strong></p>
     <ul>
-      <li>Die Werte basieren auf den jeweils ungünstigsten WLTP‑Verbrauchswerten der Fahrzeugfamilien.</li>
-      <li>Die virtuelle Distanz wird zur realen Fahrstrecke addiert, um die gesamte Batterielaufleistung (real + virtuell) zu erfassen.</li>
-      <li>Wird <strong>Energie in kWh eingegeben</strong> und zusätzlich <strong>kWh pro Tag × Tage</strong> gefüllt, wird der <strong>höhere</strong> Wert verwendet.</li>
+      <li>Die WLTP‑Verbrauchswerte stammen aus <code>models.json</code> und können dort angepasst oder erweitert werden.</li>
+      <li>Die virtuelle Distanz wird zur realen Fahrstrecke addiert, um die gesamte Batterielaufleistung zu erfassen.</li>
+      <li>Wird sowohl Energie in kWh als auch kWh pro Tag × Tage angegeben, wird der <strong>höhere</strong> Wert verwendet.</li>
     </ul>
   </div>
 
   <script>
-    // Ungünstigste WLTP‑Verbrauchswerte (in Wh/km) der jeweiligen Modellreihen
-    const consumptionWhPerKm = {
-      id3:  167,
-      id4:  174,
-      id5:  171,
-      enyaq: 160,
-      born:  157,
-      q4:    179
-    };
+    let modelConfig = {};
 
-    function calculate() {
+    async function loadModels() {
+      try {
+        const res = await fetch("models.json");
+        if (!res.ok) throw new Error("models.json nicht gefunden");
+
+        modelConfig = await res.json();
+
+        const select = document.getElementById("model");
+        select.innerHTML = "";
+
+        Object.entries(modelConfig).forEach(([id, data]) => {
+          const option = document.createElement("option");
+          option.value = id;
+          const wh = data.wltp_wh_per_km;
+          const kWh100 = (wh !== undefined) ? (wh / 10).toFixed(1) : "?";
+          option.textContent = `${data.name} – ${kWh100} kWh/100 km (≈ ${wh} Wh/km)`;
+          select.appendChild(option);
+        });
+      } catch (err) {
+        document.getElementById("result").textContent =
+          "Fehler beim Laden der Modell‑Konfiguration: " + err.message;
+        console.error(err);
+      }
+    }
+
+    async function calculate() {
+      if (Object.keys(modelConfig).length === 0) {
+        document.getElementById("result").textContent =
+          "Bitte warten, bis die Modelle geladen sind.";
+        return;
+      }
+
       const model       = document.getElementById("model").value;
       const energyKWh   = parseFloat(document.getElementById("energy_kwh").value) || 0;
       const kwhPerDay   = parseFloat(document.getElementById("kwh_per_day").value) || 0;
       const days        = parseInt(document.getElementById("days").value) || 0;
-      const resultDiv   = document.getElementById("result");
 
       const kwhFromDaily = kwhPerDay * days;
-      const totalKWh = Math.max(energyKWh, kwhFromDaily);   // nimmt den größeren Wert
+      const totalKWh = Math.max(energyKWh, kwhFromDaily);
+      const resultDiv  = document.getElementById("result");
 
       if (totalKWh <= 0) {
-        resultDiv.textContent = "Bitte gib eine gültige Energie in kWh ein oder Werte für kWh/Tag und Tage.";
+        resultDiv.textContent =
+          "Bitte gib eine gültige Energie in kWh ein oder Werte für kWh/Tag und Tage.";
         return;
       }
 
-      const whPerKm = consumptionWhPerKm[model];
-      const energyWh = totalKWh * 1000;   // kWh → Wh
-      const dist      = energyWh / whPerKm;
+      const entry    = modelConfig[model];
+      const whPerKm  = entry.wltp_wh_per_km;
+      if (!whPerKm) {
+        resultDiv.textContent =
+          "Kein Verbrauchswert für das gewählte Modell in models.json gefunden.";
+        return;
+      }
+
+      const energyWh = totalKWh * 1000;          // kWh → Wh
+      const dist     = energyWh / whPerKm;       // virtuelle Distanz in km
 
       resultDiv.innerHTML = `
         <p>
@@ -136,6 +158,9 @@
         </p>
       `;
     }
+
+    // Lade Modelle beim Start
+    loadModels();
   </script>
 
 </body>
