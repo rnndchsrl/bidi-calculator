@@ -25,12 +25,4 @@
     "name": "Audi Q4 e-tron",
     "wltp_wh_per_km": 179
   }
-
-  // Beispiel für zukünftige Erweiterung:
-  /*
-  "new_model": {
-    "name": "Neues Modell XY",
-    "wltp_wh_per_km": 185
-  }
-  */
 }
