@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Virtuelle Distanz – VW BiDi Rechner</title>
+  <title>Virtuelle Distanz – VW BiDi Rechner (kWh + Tage)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -13,7 +13,7 @@
       line-height: 1.5;
     }
     h1, h2 { margin-top: 1em; }
-    label, select, input, button {
+    label, select, input, button, .group {
       display: block;
       margin: 4px 0;
     }
@@ -21,6 +21,11 @@
       width: 100%;
       padding: 6px;
       box-sizing: border-box;
+    }
+    .group {
+      border-left: 3px solid #ccc;
+      padding-left: 10px;
+      margin: 8px 0;
     }
     button {
       margin-top: 12px;
@@ -47,10 +52,10 @@
 </head>
 <body>
 
-  <h1>Virtuelle Distanz nach VW‑Formel</h1>
+  <h1>Virtuelle Distanz nach VW‑BiDi‑Formel</h1>
   <p>
     Formel:  
-    <code>Virtuelle Distanz [km] = (V2H + V2L‑Energie [Wh]) / (ungünstigster WLTP‑Verbrauch [Wh/km])</code>
+    <code>Virtuelle Distanz [km] = (V2H + V2L‑Energie [Wh]) / Verbrauch [Wh/km]</code>
   </p>
 
   <label for="model">Modell (Fahrzeugfamilie):</label>
@@ -63,18 +68,32 @@
     <option value="q4">Audi Q4 e‑tron – 17,9 kWh/100 km (≈ 179 Wh/km)</option>
   </select>
 
-  <label for="energy">V2H + V2L Energie (Wh):</label>
-  <input type="number" id="energy" placeholder="Z. B. 12000" min="0" />
+  <!-- Eingabe 1: kWh direkt -->
+  <div class="group">
+    <label for="energy_kwh">V2H + V2L Energie (kWh, direkt):</label>
+    <input type="number" id="energy_kwh" placeholder="Z. B. 12.0" step="0.01" min="0" />
+  </div>
 
-  <button onclick="calculate()">Berechnen</button>
+  <!-- Eingabe 2: kWh pro Tag × Tage -->
+  <div class="group">
+    <p><strong>Oder:</strong> Energieverbrauch über Zeit (z. B. typische Entladung pro Tag):</p>
+    <label for="kwh_per_day">Entladene Energie pro Tag (kWh):</label>
+    <input type="number" id="kwh_per_day" placeholder="Z. B. 3.5" step="0.01" min="0" />
+
+    <label for="days">Anzahl Tage:</label>
+    <input type="number" id="days" placeholder="Z. B. 100" min="0" />
+  </div>
+
+  <button onclick="calculate()">Virtuelle Distanz berechnen</button>
 
   <div id="result" class="result"></div>
 
   <div class="info">
     <p><strong>Hinweise:</strong></p>
     <ul>
-      <li>Die hier genutzten Verbrauchswerte entsprechen den jeweils ungünstigsten WLTP‑Verbrauchswerten der Fahrzeugfamilien.</li>
+      <li>Die Werte basieren auf den jeweils ungünstigsten WLTP‑Verbrauchswerten der Fahrzeugfamilien.</li>
       <li>Die virtuelle Distanz wird zur realen Fahrstrecke addiert, um die gesamte Batterielaufleistung (real + virtuell) zu erfassen.</li>
+      <li>Wird <strong>Energie in kWh eingegeben</strong> und zusätzlich <strong>kWh pro Tag × Tage</strong> gefüllt, wird der <strong>höhere</strong> Wert verwendet.</li>
     </ul>
   </div>
 
@@ -90,22 +109,28 @@
     };
 
     function calculate() {
-      const model      = document.getElementById("model").value;
-      const energyWh   = parseFloat(document.getElementById("energy").value);
-      const resultDiv  = document.getElementById("result");
+      const model       = document.getElementById("model").value;
+      const energyKWh   = parseFloat(document.getElementById("energy_kwh").value) || 0;
+      const kwhPerDay   = parseFloat(document.getElementById("kwh_per_day").value) || 0;
+      const days        = parseInt(document.getElementById("days").value) || 0;
+      const resultDiv   = document.getElementById("result");
 
-      if (isNaN(energyWh) || energyWh <= 0) {
-        resultDiv.textContent = "Bitte gib eine gültige Energie in Wh ein.";
+      const kwhFromDaily = kwhPerDay * days;
+      const totalKWh = Math.max(energyKWh, kwhFromDaily);   // nimmt den größeren Wert
+
+      if (totalKWh <= 0) {
+        resultDiv.textContent = "Bitte gib eine gültige Energie in kWh ein oder Werte für kWh/Tag und Tage.";
         return;
       }
 
       const whPerKm = consumptionWhPerKm[model];
-      const dist    = energyWh / whPerKm;
+      const energyWh = totalKWh * 1000;   // kWh → Wh
+      const dist      = energyWh / whPerKm;
 
       resultDiv.innerHTML = `
         <p>
           <strong>Ergebnis:</strong><br />
-          Entladene Energie: ${energyWh.toLocaleString()} Wh<br />
+          Entladene Energie: ${totalKWh.toFixed(2)} kWh = ${energyWh.toLocaleString()} Wh<br />
           Verbrauchswert: ${whPerKm} Wh/km<br />
           <strong>Virtuelle Distanz ≈ ${dist.toFixed(1)} km</strong>
         </p>
